@@ -174,7 +174,7 @@ function SourcePopover({ src, anchorRect, onClose }) {
   );
 }
 
-function SourceChip({ id, variant = "compact", activePopover, setActivePopover }) {
+function SourceChip({ id, variant = "compact", activePopover, setActivePopover, sourceStripMobile = false, scrollSnapChip = false }) {
   const s = SOURCES[id];
   const isMobile = useIsMobile();
   // Hooks must be called before any early return
@@ -195,6 +195,36 @@ function SourceChip({ id, variant = "compact", activePopover, setActivePopover }
   if (!s) return null;
   const lColor = leanC(s.lean);
   const isCompact = variant === "compact";
+
+  if (isMobile && sourceStripMobile) {
+    return (
+      <a
+        href={`https://${s.url}`}
+        target="_blank"
+        rel="noopener noreferrer"
+        style={{
+          display: "inline-flex",
+          alignItems: "center",
+          gap: 4,
+          padding: "5px 10px",
+          borderRadius: 7,
+          background: T.surfaceHover,
+          border: `1px solid ${T.borderSubtle}`,
+          fontFamily: "var(--mono)",
+          fontSize: 11,
+          fontWeight: 500,
+          color: T.textSecondary,
+          textDecoration: "none",
+          whiteSpace: "nowrap",
+          lineHeight: 1,
+          userSelect: "none",
+        }}
+      >
+        <span style={{ fontWeight: 700 }}>{s.abbr}</span>
+        <span style={{ fontSize: 11, color: T.textTertiary }}>{s.name}</span>
+      </a>
+    );
+  }
 
   if (isMobile) {
     return (
@@ -241,6 +271,7 @@ function SourceChip({ id, variant = "compact", activePopover, setActivePopover }
         fontFamily: "var(--mono)", fontWeight: 500, color: isActive ? lColor : T.textSecondary,
         lineHeight: 1, cursor: "pointer", transition: "all 0.2s", whiteSpace: "nowrap", flexShrink: 0,
         userSelect: "none",
+        ...(scrollSnapChip ? { scrollSnapAlign: "start" } : {}),
       }}>
         <span style={{ width: isCompact ? 5 : 6, height: isCompact ? 5 : 6, borderRadius:"50%", background: lColor, opacity: s.lean === "center" ? 0.5 : 0.85, flexShrink: 0 }} />
         <span style={{ fontWeight: 600 }}>{s.abbr}</span>
@@ -276,28 +307,55 @@ function SourceStrip({ sourceIds }) {
     setCanScrollRight(el.scrollLeft < el.scrollWidth - el.clientWidth - 4);
   }, []);
 
-  useEffect(() => { checkScroll(); }, [checkScroll]);
+  useEffect(() => {
+    if (isMobile) return;
+    checkScroll();
+  }, [checkScroll, isMobile, sourceIds.length]);
 
   return (
-    <div style={{ position: "relative", marginBottom: 20 }}>
+    <div style={{ position: "relative", marginBottom: 20, width: "100%", maxWidth: "100%" }}>
       <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 10 }}>
         <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><circle cx="5" cy="7" r="3.5" stroke={T.textTertiary} strokeWidth="1.1"/><circle cx="9" cy="7" r="3.5" stroke={T.textTertiary} strokeWidth="1.1"/></svg>
         <span style={{ fontFamily: "var(--body)", fontSize: 12, fontWeight: 600, color: T.textTertiary, letterSpacing: "0.03em", textTransform: "uppercase" }}>{isMobile ? `${sourceIds.length} Sources · Tap to read original` : `${sourceIds.length} Sources Reporting`}</span>
       </div>
-      <div style={{ position: "relative" }}>
-        {canScrollLeft && <div style={{ position:"absolute", left:0, top:0, bottom:0, width:40, background:`linear-gradient(to right, ${T.bg}, transparent)`, zIndex:2, pointerEvents:"none" }} />}
-        {canScrollRight && <div style={{ position:"absolute", right:0, top:0, bottom:0, width:40, background:`linear-gradient(to left, ${T.bg}, transparent)`, zIndex:2, pointerEvents:"none" }} />}
-        <div ref={scrollRef} onScroll={checkScroll} className="src-strip" style={{
-          display: "flex", alignItems: "center", gap: 6,
-          overflowX: "auto", scrollbarWidth: "none", msOverflowStyle: "none",
-          padding: "4px 2px", margin: "-4px -2px",
-          WebkitOverflowScrolling: "touch",
-        }}>
+      {isMobile ? (
+        <div style={{ display: "flex", flexWrap: "wrap", gap: 8, width: "100%" }}>
           {sourceIds.map(id => (
-            <SourceChip key={id} id={id} variant="full" activePopover={activePopover} setActivePopover={setActivePopover} />
+            <SourceChip key={id} id={id} variant="full" sourceStripMobile activePopover={activePopover} setActivePopover={setActivePopover} />
           ))}
         </div>
-      </div>
+      ) : (
+        <div style={{ overflow: "hidden", width: "100%", maxWidth: "100vw", position: "relative" }}>
+          <div style={{ position: "relative" }}>
+            {canScrollLeft && <div style={{ position: "absolute", left: 0, top: 0, bottom: 0, width: 40, background: `linear-gradient(to right, ${T.bg}, transparent)`, pointerEvents: "none", zIndex: 2 }} />}
+            {canScrollRight && <div style={{ position: "absolute", right: 0, top: 0, bottom: 0, width: 40, background: `linear-gradient(to right, transparent, ${T.bg})`, pointerEvents: "none", zIndex: 2 }} />}
+            <div
+              ref={scrollRef}
+              onScroll={checkScroll}
+              className="src-strip"
+              style={{
+                overflowX: "auto",
+                overflowY: "visible",
+                WebkitOverflowScrolling: "touch",
+                scrollbarWidth: "none",
+                msOverflowStyle: "none",
+                width: "100%",
+                maxWidth: "100%",
+                position: "relative",
+                display: "flex",
+                alignItems: "center",
+                gap: 6,
+                padding: "4px 2px",
+                scrollSnapType: "x mandatory",
+              }}
+            >
+              {sourceIds.map(id => (
+                <SourceChip key={id} id={id} variant="full" scrollSnapChip activePopover={activePopover} setActivePopover={setActivePopover} />
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
