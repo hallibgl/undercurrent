@@ -1,21 +1,20 @@
 import { NextResponse } from "next/server";
-import { getSupabase } from "@/lib/supabase";
-import { mapDbRowToClientStory } from "@/lib/story-map";
+import { supabaseAdmin } from "@/lib/supabase";
 
 export async function GET() {
   try {
-    const supabase = getSupabase();
-    if (!supabase) {
-      return NextResponse.json({ stories: [], empty: true });
-    }
-
-    const { data, error } = await supabase
+    const { data, error } = await supabaseAdmin
       .from("stories")
       .select("*")
       .order("created_at", { ascending: false })
       .limit(20);
 
-    if (error) throw error;
+    if (error) {
+      return NextResponse.json({
+        error: error.message,
+        stories: [],
+      });
+    }
 
     if (!data || data.length === 0) {
       return NextResponse.json({
@@ -24,10 +23,9 @@ export async function GET() {
       });
     }
 
-    const stories = data.map(mapDbRowToClientStory);
-
     return NextResponse.json({
-      stories,
+      stories: data,
+      count: data.length,
     });
   } catch (error) {
     return NextResponse.json(

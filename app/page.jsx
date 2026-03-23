@@ -1339,6 +1339,76 @@ function LandingPage({ onEnterApp }) {
 //  APP ROOT
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
+function mapStory(s) {
+  return {
+    ...s,
+    leanBreakdown:
+      s.lean_breakdown ||
+      s.leanBreakdown ||
+      { left: 2, center: 3, right: 1 },
+    readTime:
+      s.read_time ||
+      s.readTime ||
+      "5 min",
+    contextExplainer:
+      s.context_explainer ||
+      s.contextExplainer || {
+        tldr: s.summary,
+        background: "",
+        causalChain: [],
+        whatNext: [],
+        perspectives: {
+          left: {
+            summary: "",
+            keyQuote: "",
+            quoteSource: "",
+            sentiment: ""
+          },
+          center: {
+            summary: "",
+            keyQuote: "",
+            quoteSource: "",
+            sentiment: ""
+          },
+          right: {
+            summary: "",
+            keyQuote: "",
+            quoteSource: "",
+            sentiment: ""
+          },
+        },
+      },
+    confidenceExplainer:
+      s.confidence_explainer ||
+      s.confidenceExplainer || {
+        score: s.confidence || 80,
+        sourcesAgreeing: 3,
+        sourcesTotal: 5,
+        factsCrossVerified: 8,
+        factsTotal: 10,
+        breakdown: [],
+      },
+    relatedTopics:
+      s.related_topics ||
+      s.relatedTopics || [],
+    topicColor:
+      s.topic_color ||
+      s.topicColor ||
+      "#2D6BE4",
+    publishedAt:
+      s.published_at ||
+      s.publishedAt || "",
+    trending:
+      s.trending || "+0%",
+    timestamp:
+      s.timestamp || "just now",
+    sources:
+      s.sources || [],
+    hero:
+      s.hero || false,
+  };
+}
+
 export default function App() {
   const [mode, setMode] = useState("landing");
   const [mainTab, setMainTab] = useState("trending");
@@ -1380,16 +1450,21 @@ export default function App() {
   useEffect(() => {
     async function loadStories() {
       try {
-        const res = await fetch("/api/stories");
-        const data = await res.json().catch(() => ({}));
-        if (res.ok && Array.isArray(data.stories) && data.stories.length > 0) {
-          setStories(data.stories);
+        const res = await fetch(
+          "/api/stories"
+        );
+        const data = await res.json();
+
+        if (data.stories?.length > 0) {
+          setStories(
+            data.stories.map(mapStory)
+          );
           setDataSource("live");
         } else {
           setDataSource("static");
         }
       } catch (err) {
-        console.error("Using static stories:", err);
+        console.error(err);
         setDataSource("static");
       } finally {
         setLoading(false);

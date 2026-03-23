@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import Anthropic from "@anthropic-ai/sdk";
-import { getSupabase } from "@/lib/supabase";
+import { supabaseAdmin } from "@/lib/supabase";
 import { getTopicColor } from "@/lib/story-map";
 
 export const maxDuration = 300;
@@ -154,26 +154,28 @@ Source: ${article.source.name}`
       }
     }
 
-    if (processed.length > 0) {
-      const supabase = getSupabase();
-      if (supabase) {
-        const { error: dbError } =
-          await supabase
-            .from("stories")
-            .upsert(processed);
+    const { error: dbError } = await
+      supabaseAdmin
+        .from("stories")
+        .upsert(processed);
 
-        if (dbError) {
-          console.error(
-            "Supabase error:",
-            dbError
-          );
-        }
-      }
+    if (dbError) {
+      console.error(
+        "Supabase upsert error:",
+        JSON.stringify(dbError)
+      );
+      return NextResponse.json({
+        stories: processed,
+        count: processed.length,
+        dbError: dbError.message,
+        dbSaved: false,
+      });
     }
 
     return NextResponse.json({
       stories: processed,
-      count: processed.length
+      count: processed.length,
+      dbSaved: true,
     });
 
   } catch (error) {
