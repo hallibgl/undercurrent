@@ -17,12 +17,6 @@ function parseJsonFromClaude(text) {
 
 export async function GET() {
   try {
-    if (!process.env.NEWS_API_KEY) {
-      return NextResponse.json(
-        { error: "NEWS_API_KEY is not configured" },
-        { status: 500 }
-      );
-    }
     if (!process.env.ANTHROPIC_API_KEY) {
       return NextResponse.json(
         { error: "ANTHROPIC_API_KEY is not configured" },
@@ -31,17 +25,30 @@ export async function GET() {
     }
 
     const newsRes = await fetch(
-      `https://newsapi.org/v2/top-headlines?country=us&category=politics&pageSize=10&apiKey=${process.env.NEWS_API_KEY}`
+      `https://gnews.io/api/v4/top-headlines?category=nation&lang=en&country=us&max=10&apikey=${process.env.GNEWS_API_KEY}`
     );
     const newsData = await newsRes.json();
-    const articles = newsData.articles;
 
-    if (!articles || articles.length === 0) {
+    if (!newsData.articles ||
+        newsData.articles.length === 0) {
       return NextResponse.json(
-        { error: "No articles found" },
+        { error: "No articles from GNews" },
         { status: 404 }
       );
     }
+
+    const articles = newsData.articles.map(
+      article => ({
+        title: article.title,
+        description: article.description,
+        content: article.content,
+        url: article.url,
+        publishedAt: article.publishedAt,
+        source: {
+          name: article.source.name
+        },
+      })
+    );
 
     const model =
       process.env.ANTHROPIC_MODEL || "claude-3-5-sonnet-20241022";
