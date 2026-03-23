@@ -176,6 +176,7 @@ function SourcePopover({ src, anchorRect, onClose }) {
 
 function SourceChip({ id, variant = "compact", activePopover, setActivePopover }) {
   const s = SOURCES[id];
+  const isMobile = useIsMobile();
   // Hooks must be called before any early return
   const chipRef = useRef(null);
   const [rect, setRect] = useState(null);
@@ -194,6 +195,39 @@ function SourceChip({ id, variant = "compact", activePopover, setActivePopover }
   if (!s) return null;
   const lColor = leanC(s.lean);
   const isCompact = variant === "compact";
+
+  if (isMobile) {
+    return (
+      <a
+        href={`https://${s.url}`}
+        target="_blank"
+        rel="noopener noreferrer"
+        style={{
+          display: "inline-flex",
+          alignItems: "center",
+          gap: isCompact ? 5 : 6,
+          padding: isCompact ? "4px 10px" : "6px 12px",
+          borderRadius: isCompact ? 6 : 7,
+          background: T.surfaceHover,
+          border: `1px solid ${T.borderSubtle}`,
+          fontFamily: "var(--mono)",
+          fontSize: isCompact ? 11 : 12,
+          fontWeight: 500,
+          color: T.textSecondary,
+          textDecoration: "none",
+          whiteSpace: "nowrap",
+          flexShrink: 0,
+          lineHeight: 1,
+          userSelect: "none",
+        }}
+      >
+        <span style={{ width: isCompact ? 5 : 6, height: isCompact ? 5 : 6, borderRadius: "50%", background: lColor, opacity: s.lean === "center" ? 0.5 : 0.85, flexShrink: 0 }} />
+        <span style={{ fontWeight: 700 }}>{s.abbr}</span>
+        {!isCompact && <span style={{ fontSize: 11, color: T.textTertiary }}>{s.name}</span>}
+        {!isCompact && <span style={{ fontSize: 10, color: T.primary, marginLeft: 2 }}>↗</span>}
+      </a>
+    );
+  }
 
   return (
     <>
@@ -230,6 +264,7 @@ function SourcePills({ sourceIds, max = 4 }) {
 
 function SourceStrip({ sourceIds }) {
   const [activePopover, setActivePopover] = useState(null);
+  const isMobile = useIsMobile();
   const scrollRef = useRef(null);
   const [canScrollLeft, setCanScrollLeft] = useState(false);
   const [canScrollRight, setCanScrollRight] = useState(false);
@@ -247,7 +282,7 @@ function SourceStrip({ sourceIds }) {
     <div style={{ position: "relative", marginBottom: 20 }}>
       <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 10 }}>
         <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><circle cx="5" cy="7" r="3.5" stroke={T.textTertiary} strokeWidth="1.1"/><circle cx="9" cy="7" r="3.5" stroke={T.textTertiary} strokeWidth="1.1"/></svg>
-        <span style={{ fontFamily: "var(--body)", fontSize: 12, fontWeight: 600, color: T.textTertiary, letterSpacing: "0.03em", textTransform: "uppercase" }}>{sourceIds.length} Sources Reporting</span>
+        <span style={{ fontFamily: "var(--body)", fontSize: 12, fontWeight: 600, color: T.textTertiary, letterSpacing: "0.03em", textTransform: "uppercase" }}>{isMobile ? `${sourceIds.length} Sources · Tap to read original` : `${sourceIds.length} Sources Reporting`}</span>
       </div>
       <div style={{ position: "relative" }}>
         {canScrollLeft && <div style={{ position:"absolute", left:0, top:0, bottom:0, width:40, background:`linear-gradient(to right, ${T.bg}, transparent)`, zIndex:2, pointerEvents:"none" }} />}
