@@ -103,11 +103,14 @@ function SourcePopover({ src, anchorRect, onClose }) {
       background: T.surfaceElevated,
       border: `1px solid ${T.border}`,
       borderRadius: isMobile ? "16px 16px 0 0" : 12,
-      padding: "16px",
+      padding: isMobile ? "20px" : "16px",
+      minHeight: isMobile ? 200 : undefined,
       boxShadow: `0 -4px 40px -8px rgba(0,0,0,0.5), 0 0 0 1px ${T.border}`,
       animation: isMobile ? "slideUp 0.22s cubic-bezier(0.16,1,0.3,1)" : "popIn 0.18s cubic-bezier(0.16,1,0.3,1)",
-      position: isMobile ? "relative" : "fixed",
-      ...(isMobile ? {} : { top: pos.top, left: pos.left, width: 260, zIndex: 99999 }),
+      position: "fixed",
+      ...(isMobile
+        ? { bottom: 0, left: 0, right: 0, width: "100%", zIndex: 999999 }
+        : { top: pos.top, left: pos.left, width: 260, zIndex: 999999 }),
     }}>
       {isMobile && (
         <div style={{ width: 36, height: 4, borderRadius: 2, background: T.border, margin: "0 auto 14px", opacity: 0.5 }} />
@@ -139,11 +142,9 @@ function SourcePopover({ src, anchorRect, onClose }) {
         href={`https://${src.url}`}
         target="_blank"
         rel="noopener noreferrer"
-        onClick={e => e.stopPropagation()}
-        style={{ display:"flex", alignItems:"center", justifyContent:"center", gap:6, padding:"10px 12px", borderRadius:8, background:T.primaryMuted, border:`1px solid ${T.primary}20`, textDecoration:"none", cursor:"pointer" }}
+        style={{ display:"block", padding:"12px", textAlign:"center", borderRadius:8, background:T.primaryMuted, border:`1px solid ${T.primary}20`, textDecoration:"none", cursor:"pointer", fontFamily:"var(--body)", fontSize:12, fontWeight:600, color:T.primary }}
       >
-        <span style={{ fontFamily:"var(--body)", fontSize:12, fontWeight:600, color:T.primary }}>Read original</span>
-        <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M4.5 2H10V7.5M10 2L5 7" stroke={T.primary} strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round"/></svg>
+        Read original →
       </a>
     </div>
   );
@@ -153,12 +154,11 @@ function SourcePopover({ src, anchorRect, onClose }) {
       <>
         <div
           onClick={onClose}
-          style={{ position:"fixed", inset:0, background:"rgba(0,0,0,0.65)", zIndex:99998 }}
+          style={{ position:"fixed", inset:0, zIndex:999998, background:"rgba(0,0,0,0.5)" }}
         />
         <div style={{
-          position: "fixed", bottom: 0, left: 0, right: 0,
-          zIndex: 99999,
-          maxWidth: "calc(100vw - 0px)",
+          position: "fixed", bottom: 0, left: 0, right: 0, width: "100%",
+          zIndex: 999999,
         }}>
           {inner}
         </div>
@@ -167,7 +167,7 @@ function SourcePopover({ src, anchorRect, onClose }) {
   }
 
   return (
-    <div style={{ position:"fixed", top:pos.top, left:pos.left, width:260, zIndex:99999 }}>
+    <div style={{ position:"fixed", top:pos.top, left:pos.left, width:260, zIndex:999999 }}>
       {inner}
     </div>
   );
@@ -409,7 +409,7 @@ function DeepDivePage({story, onBack, savedStories, onToggleSave, followedTopics
   const conf = story.confidenceExplainer;
 
   const handleShare = () => {
-    const url = `${window.location.origin}/story/${story.id}`;
+    const url = `${window.location.origin}?story=${story.id}`;
     const doFallback = () => {
       try {
         const ta = document.createElement("textarea");
@@ -1250,6 +1250,20 @@ export default function App() {
   useEffect(() => {
     try { localStorage.setItem("uc_followed", JSON.stringify(followedTopics)); } catch {}
   }, [followedTopics]);
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const storyId = params.get("story");
+    if (storyId) {
+      const found = STORIES.find(s => s.id === storyId);
+      if (found) {
+        // eslint-disable-next-line react-hooks/set-state-in-effect
+        setMode("app");
+        setSelectedStory(found);
+        setView("deepdive");
+      }
+    }
+  }, []);
 
   const toggleSave = useCallback((id) => {
     setSavedStories(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]);
