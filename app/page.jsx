@@ -61,6 +61,7 @@ function useIsMobile() {
 // ── Utility ─────────────────────────────────────────────────
 function confColor(s){if(s>=90)return{bg:"rgba(0,194,168,0.12)",text:"#00C2A8",ring:"rgba(0,194,168,0.25)"};if(s>=80)return{bg:"rgba(45,107,228,0.12)",text:"#5B8EE6",ring:"rgba(45,107,228,0.2)"};return{bg:"rgba(217,175,74,0.12)",text:"#D9AF4A",ring:"rgba(217,175,74,0.2)"};}
 function leanC(l){return l==="left"?T.left:l==="right"?T.right:T.textTertiary;}
+function slugify(text){return text.toLowerCase().replace(/[^a-z0-9]+/g,"-").replace(/(^-|-$)/g,"");}
 
 // ── Micro Components ────────────────────────────────────────
 function ConfBadge({score,size="sm"}){const c=confColor(score),lg=size==="lg";return<div style={{display:"inline-flex",alignItems:"center",gap:lg?6:4,padding:lg?"5px 10px":"3px 8px",borderRadius:6,background:c.bg,border:`1px solid ${c.ring}`,fontFamily:"var(--mono)",fontSize:lg?12:10,fontWeight:600,color:c.text,letterSpacing:"0.02em",lineHeight:1}}><svg width={lg?12:10} height={lg?12:10} viewBox="0 0 12 12" fill="none"><circle cx="6" cy="6" r="5" stroke={c.text} strokeWidth="1.5" opacity="0.3"/><circle cx="6" cy="6" r="5" stroke={c.text} strokeWidth="1.5" strokeDasharray={`${(score/100)*31.4} 31.4`} transform="rotate(-90 6 6)" strokeLinecap="round"/></svg>{score}%</div>;}
@@ -409,7 +410,7 @@ function DeepDivePage({story, onBack, savedStories, onToggleSave, followedTopics
   const conf = story.confidenceExplainer;
 
   const handleShare = () => {
-    const url = `${window.location.origin}?story=${story.id}`;
+    const url = `${window.location.origin}?story=${slugify(story.headline)}`;
     const doFallback = () => {
       try {
         const ta = document.createElement("textarea");
@@ -1253,9 +1254,9 @@ export default function App() {
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
-    const storyId = params.get("story");
-    if (storyId) {
-      const found = STORIES.find(s => s.id === storyId);
+    const storySlug = params.get("story");
+    if (storySlug) {
+      const found = STORIES.find(s => slugify(s.headline) === storySlug);
       if (found) {
         // eslint-disable-next-line react-hooks/set-state-in-effect
         setMode("app");
