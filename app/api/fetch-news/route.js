@@ -19,31 +19,59 @@ function parseJsonFromClaude(text) {
 
 export async function GET() {
   try {
-    const newsRes = await fetch(
-      `https://gnews.io/api/v4/top-headlines?category=nation&lang=en&country=us&max=5&apikey=${process.env.GNEWS_API_KEY}`
-    );
-    const newsData = await newsRes.json();
+    const categories = [
+      "nation",
+      "politics",
+      "world",
+      "business",
+      "technology",
+    ];
 
-    if (!newsData.articles?.length) {
-      return NextResponse.json(
-        { error: "No articles" },
-        { status: 404 }
-      );
+    const allArticles = [];
+
+    for (const category of categories) {
+      try {
+        const res = await fetch(
+          `https://gnews.io/api/v4/top-headlines?category=${category}&lang=en&country=us&max=5&apikey=${process.env.GNEWS_API_KEY}`
+        );
+        const data = await res.json();
+        if (data.articles?.length) {
+          allArticles.push(
+            ...data.articles.map(a => ({
+              title: a.title,
+              description: a.description,
+              content: a.content,
+              url: a.url,
+              publishedAt: a.publishedAt,
+              source: {
+                name: a.source.name
+              },
+            }))
+          );
+        }
+      } catch (err) {
+        console.error(
+          `Failed to fetch ${category}:`,
+          err.message
+        );
+        continue;
+      }
     }
 
-    const articles = newsData.articles
-      .map(a => ({
-        title: a.title,
-        description: a.description,
-        content: a.content,
-        url: a.url,
-        publishedAt: a.publishedAt,
-        source: { name: a.source.name },
-      }));
+    const seen = new Set();
+    const unique = allArticles.filter(a => {
+      if (seen.has(a.title)) return false;
+      seen.add(a.title);
+      return true;
+    });
+
+    console.log(
+      `Fetched ${unique.length} unique articles`
+    );
 
     const processed = [];
 
-    for (const article of articles) {
+    for (const article of unique) {
       try {
         const response = await
           anthropic.messages.create({
@@ -51,18 +79,18 @@ export async function GET() {
             max_tokens: 1500,
             messages: [{
               role: "user",
-              content: `You are a political news analyst. Analyze this article and return ONLY a JSON object, no markdown:
+              content: `You are a political news analyst. Analyze this article and return ONLY a JSON object, no markdown, no code blocks:
 
 {
-  "headline": "concise headline",
+  "headline": "concise headline under 12 words",
   "summary": "2 sentence summary",
-  "topic": "one of: AI Policy, Economy, Legal, Defense, Immigration, Climate, Tech Policy, Healthcare, Trade, Elections",
+  "topic": "one of exactly: AI Policy, Economy, Legal, Defense, Immigration, Climate, Tech Policy, Healthcare, Trade, Elections",
   "confidence": 85,
-  "tldr": "one sentence explanation",
-  "background": "2 sentences of context",
+  "tldr": "one sentence plain english explanation",
+  "background": "2 sentences of historical context",
   "causalChain": [
-    {"event": "event 1", "date": "date", "impact": "impact"},
-    {"event": "event 2", "date": "date", "impact": "impact"},
+    {"event": "event", "date": "date", "impact": "impact"},
+    {"event": "event", "date": "date", "impact": "impact"},
     {"event": "today", "date": "Today", "impact": "impact"}
   ],
   "whatNext": ["prediction 1", "prediction 2"],
@@ -108,6 +136,12 @@ Source: ${article.source.name}`
           topic_color: getTopicColor(
             parsed.topic
           ),
+          background: parsed.background,
+          tldr: parsed.tldr,
+          what_next: parsed.whatNext,
+          perspectives: parsed.perspectives,
+          related_topics: parsed.relatedTopics,
+          causal_chain: parsed.causalChain,
           context_explainer: {
             tldr: parsed.tldr,
             background: parsed.background,
@@ -139,37 +173,36 @@ Source: ${article.source.name}`
               }
             ]
           },
-          related_topics:
-            parsed.relatedTopics || [],
           hero: processed.length === 0,
         });
 
       } catch (err) {
         console.error(
-          "Article failed:",
-          article.title,
+          "Failed:", article.title,
           err.message
         );
         continue;
       }
     }
 
-    const { error: dbError } = await
-      supabaseAdmin
-        .from("stories")
-        .upsert(processed);
+    if (processed.length > 0) {
+      const { error: dbError } =
+        await supabaseAdmin
+          .from("stories")
+          .upsert(processed);
 
-    if (dbError) {
-      console.error(
-        "Supabase upsert error:",
-        JSON.stringify(dbError)
-      );
-      return NextResponse.json({
-        stories: processed,
-        count: processed.length,
-        dbError: dbError.message,
-        dbSaved: false,
-      });
+      if (dbError) {
+        console.error(
+          "Supabase error:",
+          dbError.message
+        );
+        return NextResponse.json({
+          stories: processed,
+          count: processed.length,
+          dbError: dbError.message,
+          dbSaved: false,
+        });
+      }
     }
 
     return NextResponse.json({
