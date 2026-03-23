@@ -122,26 +122,27 @@ Source: ${article.source.name}`
         const parsed = JSON.parse(text);
 
         processed.push({
-          ...parsed,
           id: crypto.randomUUID(),
-          published_at: article.publishedAt,
-          url: article.url,
-          sources: [article.source.name],
+          headline: parsed.headline,
+          summary: parsed.summary,
+          topic: parsed.topic,
+          confidence: parsed.confidence,
+          tldr: parsed.tldr,
+          background: parsed.background,
+          causal_chain: parsed.causalChain,
+          what_next: parsed.whatNext,
+          perspectives: parsed.perspectives,
+          related_topics: parsed.relatedTopics || [],
           lean_breakdown:
             parsed.leanBreakdown ||
             { left: 2, center: 3, right: 1 },
+          published_at: article.publishedAt,
+          url: article.url,
+          sources: [article.source.name],
           trending: "+0%",
           timestamp: "just now",
           read_time: "4 min",
-          topic_color: getTopicColor(
-            parsed.topic
-          ),
-          background: parsed.background,
-          tldr: parsed.tldr,
-          what_next: parsed.whatNext,
-          perspectives: parsed.perspectives,
-          related_topics: parsed.relatedTopics,
-          causal_chain: parsed.causalChain,
+          topic_color: getTopicColor(parsed.topic),
           context_explainer: {
             tldr: parsed.tldr,
             background: parsed.background,
