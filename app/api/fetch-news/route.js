@@ -3,6 +3,8 @@ import Anthropic from "@anthropic-ai/sdk";
 import { getSupabase } from "@/lib/supabase";
 import { getTopicColor } from "@/lib/story-map";
 
+export const maxDuration = 300;
+
 const anthropic = new Anthropic({
   apiKey: process.env.ANTHROPIC_API_KEY ?? "",
 });
@@ -18,109 +20,78 @@ function parseJsonFromClaude(text) {
 export async function GET() {
   try {
     const newsRes = await fetch(
-      `https://gnews.io/api/v4/top-headlines?category=nation&lang=en&country=us&max=10&apikey=${process.env.GNEWS_API_KEY}`
+      `https://gnews.io/api/v4/top-headlines?category=nation&lang=en&country=us&max=5&apikey=${process.env.GNEWS_API_KEY}`
     );
     const newsData = await newsRes.json();
 
-    if (!newsData.articles ||
-        newsData.articles.length === 0) {
+    if (!newsData.articles?.length) {
       return NextResponse.json(
-        { error: "No articles from GNews" },
+        { error: "No articles" },
         { status: 404 }
       );
     }
 
-    const articles = newsData.articles.map(
-      article => ({
-        title: article.title,
-        description: article.description,
-        content: article.content,
-        url: article.url,
-        publishedAt: article.publishedAt,
-        source: { name: article.source.name },
-      })
-    );
+    const articles = newsData.articles
+      .map(a => ({
+        title: a.title,
+        description: a.description,
+        content: a.content,
+        url: a.url,
+        publishedAt: a.publishedAt,
+        source: { name: a.source.name },
+      }));
 
     const processed = [];
 
     for (const article of articles) {
       try {
-        const prompt = `You are a political news analyst for Undercurrent, a news app that explains WHY things happen.
-
-Analyze this news article and return a JSON object with exactly this structure. Return ONLY valid JSON, no markdown, no code blocks, no explanation:
+        const response = await
+          anthropic.messages.create({
+            model: "claude-haiku-4-5",
+            max_tokens: 1500,
+            messages: [{
+              role: "user",
+              content: `You are a political news analyst. Analyze this article and return ONLY a JSON object, no markdown:
 
 {
-  "headline": "clean concise headline under 15 words",
-  "summary": "2-3 sentence summary of what happened",
-  "topic": "one of exactly: AI Policy, Economy, Legal, Defense, Immigration, Climate, Tech Policy, Healthcare, Trade, Elections",
+  "headline": "concise headline",
+  "summary": "2 sentence summary",
+  "topic": "one of: AI Policy, Economy, Legal, Defense, Immigration, Climate, Tech Policy, Healthcare, Trade, Elections",
   "confidence": 85,
-  "tldr": "one sentence plain english explanation for general public",
-  "background": "2-3 sentences of historical context",
+  "tldr": "one sentence explanation",
+  "background": "2 sentences of context",
   "causalChain": [
-    {"event": "earliest relevant event", "date": "Month Year", "impact": "why this matters"},
-    {"event": "second event", "date": "Month Year", "impact": "consequence"},
-    {"event": "third event", "date": "Month Year", "impact": "consequence"},
-    {"event": "fourth event", "date": "Month Year", "impact": "consequence"},
-    {"event": "what happened today", "date": "Today", "impact": "immediate result"}
+    {"event": "event 1", "date": "date", "impact": "impact"},
+    {"event": "event 2", "date": "date", "impact": "impact"},
+    {"event": "today", "date": "Today", "impact": "impact"}
   ],
-  "whatNext": [
-    "specific prediction 1",
-    "specific prediction 2",
-    "specific prediction 3"
-  ],
+  "whatNext": ["prediction 1", "prediction 2"],
   "perspectives": {
-    "left": {
-      "summary": "how left-leaning outlets frame this",
-      "keyQuote": "representative viewpoint",
-      "quoteSource": "outlet name",
-      "sentiment": "two word label"
-    },
-    "center": {
-      "summary": "how centrist outlets frame this",
-      "keyQuote": "representative viewpoint",
-      "quoteSource": "outlet name",
-      "sentiment": "two word label"
-    },
-    "right": {
-      "summary": "how right-leaning outlets frame this",
-      "keyQuote": "representative viewpoint",
-      "quoteSource": "outlet name",
-      "sentiment": "two word label"
-    }
+    "left": {"summary": "left view", "keyQuote": "quote", "quoteSource": "source", "sentiment": "label"},
+    "center": {"summary": "center view", "keyQuote": "quote", "quoteSource": "source", "sentiment": "label"},
+    "right": {"summary": "right view", "keyQuote": "quote", "quoteSource": "source", "sentiment": "label"}
   },
-  "relatedTopics": ["topic 1", "topic 2", "topic 3"],
+  "relatedTopics": ["topic1", "topic2"],
   "leanBreakdown": {"left": 2, "center": 3, "right": 1}
 }
 
-Article:
 Title: ${article.title}
 Description: ${article.description}
-Content: ${article.content}
-Source: ${article.source.name}
-Published: ${article.publishedAt}`;
-
-        const response = await
-          anthropic.messages.create({
-            model: "claude-sonnet-4-5",
-            max_tokens: 2000,
-            messages: [{
-              role: "user",
-              content: prompt
+Source: ${article.source.name}`
             }]
           });
 
-        let rawText =
+        let text =
           response.content[0].text.trim();
-
-        if (rawText.startsWith("```")) {
-          rawText = rawText
+        if (text.startsWith("```")) {
+          text = text
             .replace(/^```json\n?/, "")
             .replace(/^```\n?/, "")
             .replace(/\n?```$/, "")
             .trim();
         }
 
-        const parsed = JSON.parse(rawText);
+        const parsed = JSON.parse(text);
 
         processed.push({
           ...parsed,
@@ -128,11 +99,12 @@ Published: ${article.publishedAt}`;
           published_at: article.publishedAt,
           url: article.url,
           sources: [article.source.name],
-          lean_breakdown: parsed.leanBreakdown ||
+          lean_breakdown:
+            parsed.leanBreakdown ||
             { left: 2, center: 3, right: 1 },
           trending: "+0%",
           timestamp: "just now",
-          read_time: "5 min",
+          read_time: "4 min",
           topic_color: getTopicColor(
             parsed.topic
           ),
@@ -156,123 +128,52 @@ Published: ${article.publishedAt}`;
                 status: "verified"
               },
               {
-                label: "Context",
+                label: "Context analysis",
                 detail: "AI analyzed background",
                 status: "verified"
               },
               {
                 label: "Predictions",
-                detail: "Analyst projections",
+                detail: "Forward-looking analysis",
                 status: "speculative"
               }
             ]
           },
-          related_topics: parsed.relatedTopics,
-          hero: false,
+          related_topics:
+            parsed.relatedTopics || [],
+          hero: processed.length === 0,
         });
 
       } catch (err) {
         console.error(
-          "Failed to process:",
+          "Article failed:",
           article.title,
           err.message
         );
-        processed.push({
-          id: crypto.randomUUID(),
-          headline: article.title,
-          summary: article.description ||
-            "No summary available",
-          topic: "Elections",
-          topic_color: "#8E44AD",
-          confidence: 70,
-          trending: "+0%",
-          timestamp: "just now",
-          read_time: "5 min",
-          published_at: article.publishedAt,
-          url: article.url,
-          sources: [article.source.name],
-          lean_breakdown: {
-            left: 2,
-            center: 3,
-            right: 1
-          },
-          context_explainer: {
-            tldr: article.description,
-            background: "Background context being analyzed.",
-            causalChain: [{
-              event: article.title,
-              date: "Today",
-              impact: "Developing story"
-            }],
-            whatNext: [
-              "Story is developing",
-              "More details expected soon"
-            ],
-            perspectives: {
-              left: {
-                summary: "Analysis pending",
-                keyQuote: "Developing",
-                quoteSource: article.source.name,
-                sentiment: "Monitoring"
-              },
-              center: {
-                summary: "Analysis pending",
-                keyQuote: "Developing",
-                quoteSource: article.source.name,
-                sentiment: "Neutral"
-              },
-              right: {
-                summary: "Analysis pending",
-                keyQuote: "Developing",
-                quoteSource: article.source.name,
-                sentiment: "Monitoring"
-              }
-            }
-          },
-          confidence_explainer: {
-            score: 70,
-            sourcesAgreeing: 1,
-            sourcesTotal: 1,
-            factsCrossVerified: 3,
-            factsTotal: 5,
-            breakdown: [{
-              label: "Source confirmed",
-              detail: article.source.name,
-              status: "verified"
-            }]
-          },
-          related_topics: [],
-          hero: false,
-          error: err.message,
-        });
         continue;
       }
     }
 
     if (processed.length > 0) {
-      processed[0].hero = true;
-    }
+      const supabase = getSupabase();
+      if (supabase) {
+        const { error: dbError } =
+          await supabase
+            .from("stories")
+            .upsert(processed);
 
-    const supabase = getSupabase();
-    if (supabase) {
-      const { error: dbError } = await supabase
-        .from("stories")
-        .upsert(processed);
-
-      if (dbError) {
-        console.error("Supabase error:", dbError);
+        if (dbError) {
+          console.error(
+            "Supabase error:",
+            dbError
+          );
+        }
       }
     }
 
     return NextResponse.json({
       stories: processed,
-      count: processed.length,
-      errors: processed
-        .filter(s => s.error)
-        .map(s => ({
-          headline: s.headline,
-          error: s.error
-        }))
+      count: processed.length
     });
 
   } catch (error) {
