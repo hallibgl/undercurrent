@@ -443,11 +443,11 @@ function StoryCard({story,onClick}){
 
 // ── Pages ────────────────────────────────────────────────────
 
-function TrendingPage({onStoryClick, topicFilter, onClearFilter}) {
+function TrendingPage({stories, dataSource, onStoryClick, topicFilter, onClearFilter}) {
   const m = useIsMobile();
   const allStories = topicFilter
-    ? STORIES.filter(s => s.topic === topicFilter || (s.relatedTopics && s.relatedTopics.includes(topicFilter)))
-    : STORIES;
+    ? stories.filter(s => s.topic === topicFilter || (s.relatedTopics && s.relatedTopics.includes(topicFilter)))
+    : stories;
   const hero = allStories[0];
   const grid = allStories.slice(1);
   const statsAll = [{l:"Sources Active",v:"21",i:"◉"},{l:"Stories Today",v:"147",i:"◈"},{l:"Avg Confidence",v:"87%",i:"◎"},{l:"Updated",v:"2m ago",i:"◷"}];
@@ -467,7 +467,26 @@ function TrendingPage({onStoryClick, topicFilter, onClearFilter}) {
           {stats.map((s,i,a)=>(
             <div key={i} style={{flex:1,display:"flex",alignItems:"center",gap:m?8:10,padding:m?"9px 12px":"9px 14px",background:T.surface,borderRadius:i===0?"9px 0 0 9px":i===a.length-1?"0 9px 9px 0":0}}>
               <span style={{fontSize:13,opacity:0.4}}>{s.i}</span>
-              <div><div style={{fontFamily:"var(--mono)",fontSize:m?12:13,fontWeight:700,color:T.text,lineHeight:1}}>{s.v}</div><div style={{fontFamily:"var(--body)",fontSize:9,color:T.textTertiary,marginTop:2}}>{s.l}</div></div>
+              <div style={{minWidth:0}}>
+                <div style={{fontFamily:"var(--mono)",fontSize:m?12:13,fontWeight:700,color:T.text,lineHeight:1}}>{s.v}</div>
+                <div style={{fontFamily:"var(--body)",fontSize:9,color:T.textTertiary,marginTop:2,display:"flex",alignItems:"center",gap:6}}>
+                  {i === 0 && (
+                    <span
+                      title={dataSource === "live" ? "Live data" : "Demo data"}
+                      style={{
+                        width: 7,
+                        height: 7,
+                        borderRadius: "50%",
+                        flexShrink: 0,
+                        background: dataSource === "live" ? "#00C2A8" : "#D9AF4A",
+                        boxShadow: dataSource === "live" ? "0 0 8px rgba(0,194,168,0.55)" : "none",
+                        animation: dataSource === "live" ? "ucLivePulse 1.8s ease-in-out infinite" : "none",
+                      }}
+                    />
+                  )}
+                  <span>{s.l}</span>
+                </div>
+              </div>
             </div>
           ))}
         </div>
@@ -541,7 +560,7 @@ function DeepDivePage({story, onBack, savedStories, onToggleSave, followedTopics
       <SourceStrip sourceIds={story.sources}/>
       <h1 style={{fontFamily:"var(--serif)",fontSize:m?22:38,fontWeight:700,lineHeight:1.2,color:T.text,margin:m?"12px 0 12px":"0 0 16px",letterSpacing:"-0.015em"}}>{story.headline}</h1>
       <div style={{display:"flex",alignItems:"center",gap:m?8:14,marginBottom:m?16:24,fontFamily:"var(--mono)",fontSize:m?10:11,color:T.textTertiary,flexWrap:"wrap"}}>
-        <span style={{display:"flex",alignItems:"center",gap:4}}>{I.clock} {m?story.publishedAt.split("·")[0].trim():story.publishedAt}</span>
+        <span style={{display:"flex",alignItems:"center",gap:4}}>{I.clock} {m ? (story.publishedAt && story.publishedAt.includes("·") ? story.publishedAt.split("·")[0].trim() : story.publishedAt) : story.publishedAt}</span>
         <span style={{opacity:0.3}}>·</span>
         <span>{story.readTime} read</span>
       </div>
@@ -605,7 +624,7 @@ function DeepDivePage({story, onBack, savedStories, onToggleSave, followedTopics
         </Expandable>
         <Expandable title="What Happens Next" icon={<svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M3 8H13M13 8L9 4M13 8L9 12" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round"/></svg>} accentColor={T.accent}>
           <div style={{display:"flex",flexDirection:"column",gap:8}}>
-            {ctx.whatNext.map((item,i)=>(
+            {(ctx.whatNext || []).map((item,i)=>(
               <div key={i} style={{display:"flex",alignItems:"flex-start",gap:10,padding:"10px 14px",borderRadius:8,background:T.surfaceHover+"60"}}>
                 <span style={{fontFamily:"var(--mono)",fontSize:11,fontWeight:700,color:T.accent,marginTop:1}}>{String(i+1).padStart(2,"0")}</span>
                 <p style={{fontFamily:"var(--body)",fontSize:13,lineHeight:1.6,color:T.textSecondary,margin:0}}>{item}</p>
@@ -654,11 +673,11 @@ function DeepDivePage({story, onBack, savedStories, onToggleSave, followedTopics
 }
 
 // FEATURE #7: DigestsPage — fixed hooks violation, premium lock overlay on categories >= 5
-function DigestStoryItem({st, onStoryClick}) {
+function DigestStoryItem({stories, st, onStoryClick}) {
   const [h, setH] = useState(false);
   const handleClick = () => {
     if (st.storyRef) {
-      const f = STORIES.find(s => s.id === st.storyRef);
+      const f = stories.find(s => s.id === st.storyRef) || STORIES.find(s => s.id === st.storyRef);
       if (f) onStoryClick(f);
     }
   };
@@ -680,7 +699,7 @@ function DigestStoryItem({st, onStoryClick}) {
   );
 }
 
-function DigestsPage({onStoryClick}) {
+function DigestsPage({stories, onStoryClick}) {
   const [period, setPeriod] = useState("daily");
   const m = useIsMobile();
   const d = DIGESTS[period];
@@ -750,7 +769,7 @@ function DigestsPage({onStoryClick}) {
             </div>
             <div style={{padding:"8px 4px"}}>
               {cat.stories.map((st,si) => (
-                <DigestStoryItem key={si} st={st} onStoryClick={onStoryClick}/>
+                <DigestStoryItem key={si} stories={stories} st={st} onStoryClick={onStoryClick}/>
               ))}
             </div>
             {isLocked && (
@@ -774,7 +793,7 @@ function DigestsPage({onStoryClick}) {
 }
 
 // FEATURE #8: For You page — full implementation
-function ForYouPage({followedTopics, onStoryClick, onBrowseTrending}) {
+function ForYouPage({stories, followedTopics, onStoryClick, onBrowseTrending}) {
   if (followedTopics.length === 0) {
     return (
       <div className="fade-up" style={{padding:"60px 0",textAlign:"center"}}>
@@ -785,7 +804,7 @@ function ForYouPage({followedTopics, onStoryClick, onBrowseTrending}) {
       </div>
     );
   }
-  const filtered = STORIES.filter(s =>
+  const filtered = stories.filter(s =>
     followedTopics.includes(s.topic) ||
     (s.relatedTopics && s.relatedTopics.some(t => followedTopics.includes(t)))
   ).sort((a,b) => b.confidence - a.confidence);
@@ -818,8 +837,10 @@ function ForYouPage({followedTopics, onStoryClick, onBrowseTrending}) {
 }
 
 // FEATURE #5: Account page — saved stories + followed topics
-function AccountPage({savedStories, followedTopics, onStoryClick, onTopicFilter, onToggleFollow}) {
-  const savedStoryObjects = STORIES.filter(s => savedStories.includes(s.id));
+function AccountPage({stories, savedStories, followedTopics, onStoryClick, onTopicFilter, onToggleFollow}) {
+  const savedStoryObjects = savedStories
+    .map((id) => stories.find((s) => s.id === id) || STORIES.find((s) => s.id === id))
+    .filter(Boolean);
   return (
     <div className="fade-up" style={{paddingBottom:60}}>
       <h1 style={{fontFamily:"var(--serif)",fontSize:28,fontWeight:700,color:T.text,margin:"16px 0 28px"}}>Account</h1>
@@ -903,9 +924,9 @@ function SavedStoryRow({story, onClick}) {
 }
 
 // FEATURE #6: Topic Feed view
-function TopicFeedPage({topic, onBack, onStoryClick}) {
+function TopicFeedPage({stories, topic, onBack, onStoryClick}) {
   const m = useIsMobile();
-  const filtered = STORIES.filter(s =>
+  const filtered = stories.filter(s =>
     s.topic === topic ||
     (s.relatedTopics && s.relatedTopics.includes(topic))
   );
@@ -1326,6 +1347,10 @@ export default function App() {
   const [topicFilter, setTopicFilter] = useState(null);
   const [innerView, setInnerView] = useState(null); // "about" | "methodology" | "sources" | "premium"
 
+  const [stories, setStories] = useState(STORIES);
+  const [loading, setLoading] = useState(true);
+  const [dataSource, setDataSource] = useState("static");
+
   // Persisted state — lazy localStorage initialization (avoids setState-in-effect lint)
   const [savedStories, setSavedStories] = useState(() => {
     if (typeof window === "undefined") return [];
@@ -1346,17 +1371,47 @@ export default function App() {
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
-    const storySlug = params.get("story");
-    if (storySlug) {
-      const found = STORIES.find(s => slugify(s.headline) === storySlug);
-      if (found) {
-        // eslint-disable-next-line react-hooks/set-state-in-effect
-        setMode("app");
-        setSelectedStory(found);
-        setView("deepdive");
-      }
+    if (params.get("story")) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setMode("app");
     }
   }, []);
+
+  useEffect(() => {
+    async function loadStories() {
+      try {
+        const res = await fetch("/api/stories");
+        const data = await res.json().catch(() => ({}));
+        if (res.ok && Array.isArray(data.stories) && data.stories.length > 0) {
+          setStories(data.stories);
+          setDataSource("live");
+        } else {
+          setDataSource("static");
+        }
+      } catch (err) {
+        console.error("Using static stories:", err);
+        setDataSource("static");
+      } finally {
+        setLoading(false);
+      }
+    }
+    loadStories();
+  }, []);
+
+  useEffect(() => {
+    if (loading) return;
+    const params = new URLSearchParams(window.location.search);
+    const storySlug = params.get("story");
+    if (!storySlug) return;
+    const found =
+      stories.find((s) => slugify(s.headline) === storySlug) ||
+      STORIES.find((s) => slugify(s.headline) === storySlug);
+    if (found) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setSelectedStory(found);
+      setView("deepdive");
+    }
+  }, [loading, stories]);
 
   const toggleSave = useCallback((id) => {
     setSavedStories(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]);
@@ -1423,7 +1478,7 @@ export default function App() {
     if (innerView === "methodology") return <MethodologyPage onBack={() => setInnerView(null)} />;
     if (innerView === "sources") return <SourcesPage onBack={() => setInnerView(null)} />;
     if (innerView === "premium") return <PremiumPage onBack={() => setInnerView(null)} onStartFree={enterApp} />;
-    if (view === "topicfeed") return <TopicFeedPage topic={topicFilter} onBack={goBack} onStoryClick={openStory} />;
+    if (view === "topicfeed") return <TopicFeedPage stories={stories} topic={topicFilter} onBack={goBack} onStoryClick={openStory} />;
     if (view === "deepdive" && selectedStory) return (
       <div style={{ padding: "20px 0" }}>
         <DeepDivePage
@@ -1442,6 +1497,50 @@ export default function App() {
 
   const inner = renderInner();
 
+  if (mode === "app" && loading) {
+    return (
+      <>
+        <style>{`
+          @import url('https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300;0,9..144,400;0,9..144,500;0,9..144,600;0,9..144,700;1,9..144,400&family=Inter:wght@300;400;500;600;700&display=swap');
+          :root{--serif:'Fraunces','Georgia',serif;--body:'Inter',-apple-system,sans-serif;--mono:'SF Mono','Fira Code','JetBrains Mono','Consolas',monospace;}
+          *{margin:0;padding:0;box-sizing:border-box;}
+          html,body{background:#0A0A0F;overflow-x:hidden;max-width:100vw;}
+          @keyframes ucLivePulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:0.55;transform:scale(0.92)}}
+        `}</style>
+        <div style={{
+          display: "flex",
+          flexDirection: "column",
+          alignItems: "center",
+          justifyContent: "center",
+          height: "100vh",
+          background: "#0A0A0F",
+          gap: 16,
+        }}>
+          <div style={{
+            width: 48,
+            height: 48,
+            borderRadius: 14,
+            background: "linear-gradient(135deg, #2D6BE4, #00C2A8)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            fontSize: 24,
+          }}>
+            〜
+          </div>
+          <div style={{
+            fontFamily: "var(--mono)",
+            fontSize: 13,
+            color: "#55556A",
+            letterSpacing: "0.06em",
+          }}>
+            Pulling the current...
+          </div>
+        </div>
+      </>
+    );
+  }
+
   return (
     <>
       <style>{`
@@ -1454,6 +1553,7 @@ export default function App() {
         .fade-up{animation:fadeUp 0.45s cubic-bezier(0.16,1,0.3,1) forwards;opacity:0;}
         @keyframes popIn{from{opacity:0;transform:translateY(4px) scale(0.97);}to{opacity:1;transform:translateY(0) scale(1);}}
         @keyframes slideUp{from{opacity:0;transform:translateY(20px);}to{opacity:1;transform:translateY(0);}}
+        @keyframes ucLivePulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:0.55;transform:scale(0.92)}}
         ::-webkit-scrollbar{width:5px;}::-webkit-scrollbar-track{background:transparent;}::-webkit-scrollbar-thumb{background:${T.border};border-radius:3px;}
         ::selection{background:${T.primary}30;color:${T.text};}button:hover{filter:brightness(1.08);}
         @media(max-width:767px){
@@ -1481,13 +1581,15 @@ export default function App() {
           toggleFollow={toggleFollow}
           handleTopicFilterFromAccount={handleTopicFilterFromAccount}
           openInnerView={openInnerView}
+          stories={stories}
+          dataSource={dataSource}
         />
       )}
     </>
   );
 }
 
-function AppShell({ mainTab, view, inner, showBack, goBack, goToLanding, handleTabChange, openStory, topicFilter, setTopicFilter, savedStories, followedTopics, toggleFollow, handleTopicFilterFromAccount, openInnerView }) {
+function AppShell({ mainTab, view, inner, showBack, goBack, goToLanding, handleTabChange, openStory, topicFilter, setTopicFilter, savedStories, followedTopics, toggleFollow, handleTopicFilterFromAccount, openInnerView, stories, dataSource }) {
   const m = useIsMobile();
   return (
         <div style={{ minHeight: "100vh", background: T.bg, color: T.text, overflowX: "hidden", width: "100%", maxWidth: "100vw", position: "relative" }}>
@@ -1517,14 +1619,17 @@ function AppShell({ mainTab, view, inner, showBack, goBack, goToLanding, handleT
                 <>
                   {mainTab === "trending" && (
                     <TrendingPage
+                      stories={stories}
+                      dataSource={dataSource}
                       onStoryClick={openStory}
                       topicFilter={topicFilter}
                       onClearFilter={() => setTopicFilter(null)}
                     />
                   )}
-                  {mainTab === "digests" && <DigestsPage onStoryClick={openStory} />}
+                  {mainTab === "digests" && <DigestsPage stories={stories} onStoryClick={openStory} />}
                   {mainTab === "foryou" && (
                     <ForYouPage
+                      stories={stories}
                       followedTopics={followedTopics}
                       onStoryClick={openStory}
                       onBrowseTrending={() => handleTabChange("trending")}
@@ -1532,6 +1637,7 @@ function AppShell({ mainTab, view, inner, showBack, goBack, goToLanding, handleT
                   )}
                   {mainTab === "account" && (
                     <AccountPage
+                      stories={stories}
                       savedStories={savedStories}
                       followedTopics={followedTopics}
                       onStoryClick={openStory}

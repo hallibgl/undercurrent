@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import Anthropic from "@anthropic-ai/sdk";
-import { supabase } from "@/lib/supabase";
+import { getSupabase } from "@/lib/supabase";
 import { getTopicColor } from "@/lib/story-map";
 
 const anthropic = new Anthropic({
@@ -151,11 +151,8 @@ Published: ${article.publishedAt}`;
 
     const validStories = processed.filter(Boolean);
 
-    if (
-      process.env.NEXT_PUBLIC_SUPABASE_URL &&
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY &&
-      validStories.length > 0
-    ) {
+    const supabase = getSupabase();
+    if (supabase && validStories.length > 0) {
       const { error } = await supabase.from("stories").upsert(validStories, {
         onConflict: "id",
       });

@@ -1,10 +1,11 @@
 import { NextResponse } from "next/server";
-import { supabase } from "@/lib/supabase";
+import { getSupabase } from "@/lib/supabase";
 import { mapDbRowToClientStory } from "@/lib/story-map";
 
 export async function GET() {
   try {
-    if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY) {
+    const supabase = getSupabase();
+    if (!supabase) {
       return NextResponse.json({ stories: [], empty: true });
     }
 
