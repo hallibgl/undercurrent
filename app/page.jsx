@@ -325,27 +325,26 @@ function SourceStrip({ sourceIds }) {
           ))}
         </div>
       ) : (
-        <div style={{ overflow: "hidden", width: "100%", maxWidth: "100vw", position: "relative" }}>
+        <div style={{ width: "100%", maxWidth: "100%", overflowX: "hidden", position: "relative" }}>
           <div style={{ position: "relative" }}>
             {canScrollLeft && <div style={{ position: "absolute", left: 0, top: 0, bottom: 0, width: 40, background: `linear-gradient(to right, ${T.bg}, transparent)`, pointerEvents: "none", zIndex: 2 }} />}
             {canScrollRight && <div style={{ position: "absolute", right: 0, top: 0, bottom: 0, width: 40, background: `linear-gradient(to right, transparent, ${T.bg})`, pointerEvents: "none", zIndex: 2 }} />}
             <div
               ref={scrollRef}
               onScroll={checkScroll}
-              className="src-strip"
+              className="src-scroll"
               style={{
-                overflowX: "auto",
-                overflowY: "visible",
-                WebkitOverflowScrolling: "touch",
-                scrollbarWidth: "none",
-                msOverflowStyle: "none",
-                width: "100%",
-                maxWidth: "100%",
-                position: "relative",
                 display: "flex",
                 alignItems: "center",
                 gap: 6,
-                padding: "4px 2px",
+                overflowX: "auto",
+                overflowY: "visible",
+                scrollbarWidth: "none",
+                msOverflowStyle: "none",
+                WebkitOverflowScrolling: "touch",
+                padding: "4px 0",
+                width: "100%",
+                boxSizing: "border-box",
                 scrollSnapType: "x mandatory",
               }}
             >
@@ -528,7 +527,7 @@ function DeepDivePage({story, onBack, savedStories, onToggleSave, followedTopics
   };
 
   return (
-    <div style={{maxWidth:m?"100%":800,margin:"0 auto",padding:m?"0":"0"}} className="fade-up">
+    <div style={{maxWidth:800,margin:"0 auto",width:"100%",overflowX:"hidden",padding:m?"0":"0"}} className="fade-up">
       <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:m?16:24,fontFamily:"var(--mono)",fontSize:10,color:T.textTertiary}}>
         <span style={{cursor:"pointer",color:T.primary}} onClick={onBack}>Back</span>
         <span>{I.chevRight}</span>
@@ -1450,11 +1449,11 @@ export default function App() {
         :root{--serif:'Fraunces','Georgia',serif;--body:'Inter',-apple-system,sans-serif;--mono:'SF Mono','Fira Code','JetBrains Mono','Consolas',monospace;}
         *{margin:0;padding:0;box-sizing:border-box;}
         html,body{background:${T.bg};overflow-x:hidden;max-width:100vw;}
+        .src-scroll::-webkit-scrollbar{display:none;}
         @keyframes fadeUp{from{opacity:0;transform:translateY(12px);}to{opacity:1;transform:translateY(0);}}
         .fade-up{animation:fadeUp 0.45s cubic-bezier(0.16,1,0.3,1) forwards;opacity:0;}
         @keyframes popIn{from{opacity:0;transform:translateY(4px) scale(0.97);}to{opacity:1;transform:translateY(0) scale(1);}}
         @keyframes slideUp{from{opacity:0;transform:translateY(20px);}to{opacity:1;transform:translateY(0);}}
-        .src-strip::-webkit-scrollbar{display:none;}
         ::-webkit-scrollbar{width:5px;}::-webkit-scrollbar-track{background:transparent;}::-webkit-scrollbar-thumb{background:${T.border};border-radius:3px;}
         ::selection{background:${T.primary}30;color:${T.text};}button:hover{filter:brightness(1.08);}
         @media(max-width:767px){
@@ -1491,9 +1490,9 @@ export default function App() {
 function AppShell({ mainTab, view, inner, showBack, goBack, goToLanding, handleTabChange, openStory, topicFilter, setTopicFilter, savedStories, followedTopics, toggleFollow, handleTopicFilterFromAccount, openInnerView }) {
   const m = useIsMobile();
   return (
-        <div style={{ minHeight: "100vh", background: T.bg, color: T.text }}>
+        <div style={{ minHeight: "100vh", background: T.bg, color: T.text, overflowX: "hidden", width: "100%", maxWidth: "100vw", position: "relative" }}>
           {!m && <div style={{ position: "fixed", top: -200, left: "50%", transform: "translateX(-50%)", width: 900, height: 500, borderRadius: "50%", background: `radial-gradient(ellipse, ${T.primary}06 0%, transparent 70%)`, pointerEvents: "none" }} />}
-          <div style={{ maxWidth: 1100, margin: "0 auto", padding: m ? "0 16px" : "0 28px", position: "relative", zIndex: 1 }}>
+          <div style={{ maxWidth: 1100, margin: "0 auto", padding: m ? "0 16px" : "0 28px", width: "100%", overflowX: "hidden", position: "relative", zIndex: 1 }}>
             <NavHeader
               onBack={goBack}
               showBack={showBack}
