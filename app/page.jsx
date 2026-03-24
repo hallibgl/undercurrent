@@ -699,16 +699,17 @@ function DigestStoryItem({stories, st, onStoryClick}) {
   );
 }
 
+const PRIORITY_INFO = {
+  critical: "Breaking story with immediate impact on millions of people",
+  high: "Major story with significant policy or political implications",
+  medium: "Important ongoing story worth following closely",
+  standard: "Background story providing useful context"
+};
+
 function DigestsPage({stories, onStoryClick}) {
   const [period, setPeriod] = useState("daily");
   const m = useIsMobile();
   const d = DIGESTS[period];
-  const priorityExplanations = {
-    critical: "Breaking or high-impact story affecting millions of people directly",
-    high: "Significant story with major policy or political implications",
-    medium: "Important ongoing story worth following",
-    standard: "Background story providing useful context"
-  };
   const periodOpts = [{id:"daily",label:"Daily",sub:"Today"},{id:"weekly",label:"Weekly",sub:"This Week"},{id:"monthly",label:"Monthly",sub:"March"}];
   const statsItems = [{l:"Stories",v:d.storyCount},{l:"Topics",v:d.topicCount},{l:"Read Time",v:d.readTime.replace(" read","")},{l:"Sources",v:"21"}];
   return (
@@ -771,9 +772,28 @@ function DigestsPage({stories, onStoryClick}) {
                   <div style={{fontFamily:"var(--mono)",fontSize:10,color:T.textTertiary}}>{cat.stories.length} {cat.stories.length===1?"story":"stories"}</div>
                 </div>
               </div>
-              <div style={{display:"flex",alignItems:"center",gap:6}}>
+              <div style={{display:"flex",alignItems:"center"}}>
                 <span style={{padding:"3px 9px",borderRadius:5,background:`${pBadge.c}12`,border:`1px solid ${pBadge.c}20`,fontFamily:"var(--mono)",fontSize:10,fontWeight:600,color:pBadge.c,textTransform:"uppercase"}}>{pBadge.l}</span>
-                <span title={priorityExplanations[cat.priority]} style={{display:"inline-flex",alignItems:"center",justifyContent:"center",width:16,height:16,borderRadius:"50%",border:`1px solid ${T.border}`,background:T.surfaceHover,color:T.textTertiary,fontFamily:"var(--mono)",fontSize:10,cursor:"help"}}>i</span>
+                <span
+                  title={PRIORITY_INFO[cat.priority]}
+                  style={{
+                    display: "inline-flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    width: 14,
+                    height: 14,
+                    borderRadius: "50%",
+                    background: T.surfaceHover,
+                    border: `1px solid ${T.border}`,
+                    fontFamily: "var(--mono)",
+                    fontSize: 9,
+                    color: T.textTertiary,
+                    cursor: "help",
+                    marginLeft: 4,
+                  }}
+                >
+                  i
+                </span>
               </div>
             </div>
             <div style={{padding:"8px 4px"}}>
@@ -1430,25 +1450,36 @@ function mapStory(s) {
 
 function timeAgo(dateString) {
   if (!dateString) return "recently";
-  const now = new Date();
-  const date = new Date(dateString);
-  const seconds = Math.floor(
-    (now - date) / 1000
-  );
-
-  if (seconds < 60)
-    return "just now";
-  if (seconds < 3600)
-    return `${Math.floor(seconds / 60)}m ago`;
-  if (seconds < 86400)
-    return `${Math.floor(seconds / 3600)}h ago`;
-  if (seconds < 604800)
-    return `${Math.floor(seconds / 86400)}d ago`;
-
-  return date.toLocaleDateString("en-US", {
-    month: "short",
-    day: "numeric"
-  });
+  try {
+    const now = new Date();
+    const date = new Date(dateString);
+    if (isNaN(date.getTime()))
+      return "recently";
+    const seconds = Math.floor(
+      (now - date) / 1000
+    );
+    if (seconds < 60) return "just now";
+    if (seconds < 3600)
+      return `${Math.floor(
+        seconds / 60
+      )}m ago`;
+    if (seconds < 86400)
+      return `${Math.floor(
+        seconds / 3600
+      )}h ago`;
+    if (seconds < 604800)
+      return `${Math.floor(
+        seconds / 86400
+      )}d ago`;
+    return date.toLocaleDateString(
+      "en-US", {
+        month: "short",
+        day: "numeric"
+      }
+    );
+  } catch {
+    return "recently";
+  }
 }
 
 export default function App() {
