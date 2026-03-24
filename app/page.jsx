@@ -703,6 +703,12 @@ function DigestsPage({stories, onStoryClick}) {
   const [period, setPeriod] = useState("daily");
   const m = useIsMobile();
   const d = DIGESTS[period];
+  const priorityExplanations = {
+    critical: "Breaking or high-impact story affecting millions of people directly",
+    high: "Significant story with major policy or political implications",
+    medium: "Important ongoing story worth following",
+    standard: "Background story providing useful context"
+  };
   const periodOpts = [{id:"daily",label:"Daily",sub:"Today"},{id:"weekly",label:"Weekly",sub:"This Week"},{id:"monthly",label:"Monthly",sub:"March"}];
   const statsItems = [{l:"Stories",v:d.storyCount},{l:"Topics",v:d.topicCount},{l:"Read Time",v:d.readTime.replace(" read","")},{l:"Sources",v:"21"}];
   return (
@@ -765,7 +771,10 @@ function DigestsPage({stories, onStoryClick}) {
                   <div style={{fontFamily:"var(--mono)",fontSize:10,color:T.textTertiary}}>{cat.stories.length} {cat.stories.length===1?"story":"stories"}</div>
                 </div>
               </div>
-              <span style={{padding:"3px 9px",borderRadius:5,background:`${pBadge.c}12`,border:`1px solid ${pBadge.c}20`,fontFamily:"var(--mono)",fontSize:10,fontWeight:600,color:pBadge.c,textTransform:"uppercase"}}>{pBadge.l}</span>
+              <div style={{display:"flex",alignItems:"center",gap:6}}>
+                <span style={{padding:"3px 9px",borderRadius:5,background:`${pBadge.c}12`,border:`1px solid ${pBadge.c}20`,fontFamily:"var(--mono)",fontSize:10,fontWeight:600,color:pBadge.c,textTransform:"uppercase"}}>{pBadge.l}</span>
+                <span title={priorityExplanations[cat.priority]} style={{display:"inline-flex",alignItems:"center",justifyContent:"center",width:16,height:16,borderRadius:"50%",border:`1px solid ${T.border}`,background:T.surfaceHover,color:T.textTertiary,fontFamily:"var(--mono)",fontSize:10,cursor:"help"}}>i</span>
+              </div>
             </div>
             <div style={{padding:"8px 4px"}}>
               {cat.stories.map((st,si) => (
@@ -1396,17 +1405,50 @@ function mapStory(s) {
       s.topicColor ||
       "#2D6BE4",
     publishedAt:
-      s.published_at ||
-      s.publishedAt || "",
+      s.published_at ?
+        new Date(s.published_at)
+          .toLocaleDateString("en-US", {
+            month: "long",
+            day: "numeric",
+            year: "numeric",
+            hour: "numeric",
+            minute: "2-digit",
+            timeZoneName: "short"
+          }) : "",
     trending:
       s.trending || "+0%",
     timestamp:
-      s.timestamp || "just now",
+      timeAgo(
+        s.published_at || s.publishedAt
+      ),
     sources:
       s.sources || [],
     hero:
       s.hero || false,
   };
+}
+
+function timeAgo(dateString) {
+  if (!dateString) return "recently";
+  const now = new Date();
+  const date = new Date(dateString);
+  const seconds = Math.floor(
+    (now - date) / 1000
+  );
+
+  if (seconds < 60)
+    return "just now";
+  if (seconds < 3600)
+    return `${Math.floor(seconds / 60)}m ago`;
+  if (seconds < 86400)
+    return `${Math.floor(seconds / 3600)}h ago`;
+  if (seconds < 604800)
+    return `${Math.floor(seconds / 86400)}d ago`;
+
+  return date.toLocaleDateString("en-US", {
+    month: "short",
+    day: "numeric"
+  });
 }
 
 export default function App() {
