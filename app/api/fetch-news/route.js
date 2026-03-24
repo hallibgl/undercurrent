@@ -198,7 +198,7 @@ function groupByStory(articles) {
       !used.has(a.title) &&
       titleWords.filter(w =>
         a.title.toLowerCase().includes(w)
-      ).length >= 2
+      ).length >= 1
     );
 
     const group = [article, ...related];

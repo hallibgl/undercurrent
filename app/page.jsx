@@ -1368,6 +1368,40 @@ function LandingPage({ onEnterApp }) {
 //  APP ROOT
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
+function timeAgo(dateString) {
+  if (!dateString) return "recently";
+  try {
+    const now = new Date();
+    const date = new Date(dateString);
+    if (isNaN(date.getTime()))
+      return "recently";
+    const seconds = Math.floor(
+      (now - date) / 1000
+    );
+    if (seconds < 60) return "just now";
+    if (seconds < 3600)
+      return `${Math.floor(
+        seconds / 60
+      )}m ago`;
+    if (seconds < 86400)
+      return `${Math.floor(
+        seconds / 3600
+      )}h ago`;
+    if (seconds < 604800)
+      return `${Math.floor(
+        seconds / 86400
+      )}d ago`;
+    return date.toLocaleDateString(
+      "en-US", {
+        month: "short",
+        day: "numeric"
+      }
+    );
+  } catch {
+    return "recently";
+  }
+}
+
 function mapStory(s) {
   return {
     ...s,
@@ -1424,62 +1458,27 @@ function mapStory(s) {
       s.topic_color ||
       s.topicColor ||
       "#2D6BE4",
-    publishedAt:
-      s.published_at ?
-        new Date(s.published_at)
-          .toLocaleDateString("en-US", {
-            month: "long",
-            day: "numeric",
-            year: "numeric",
-            hour: "numeric",
-            minute: "2-digit",
-            timeZoneName: "short"
-          }) : "",
+    publishedAt: s.published_at ?
+      new Date(s.published_at)
+        .toLocaleDateString("en-US", {
+          month: "long",
+          day: "numeric",
+          year: "numeric",
+          hour: "numeric",
+          minute: "2-digit",
+        }) : "Recently",
     trending:
       s.trending || "+0%",
-    timestamp:
-      timeAgo(
-        s.published_at || s.publishedAt
-      ),
-    sources:
-      s.sources || [],
+    timestamp: timeAgo(
+      s.published_at || s.publishedAt
+    ),
+    sources: Array.isArray(s.sources) ?
+      s.sources :
+      s.sources ? [s.sources] :
+      ["Unknown"],
     hero:
       s.hero || false,
   };
-}
-
-function timeAgo(dateString) {
-  if (!dateString) return "recently";
-  try {
-    const now = new Date();
-    const date = new Date(dateString);
-    if (isNaN(date.getTime()))
-      return "recently";
-    const seconds = Math.floor(
-      (now - date) / 1000
-    );
-    if (seconds < 60) return "just now";
-    if (seconds < 3600)
-      return `${Math.floor(
-        seconds / 60
-      )}m ago`;
-    if (seconds < 86400)
-      return `${Math.floor(
-        seconds / 3600
-      )}h ago`;
-    if (seconds < 604800)
-      return `${Math.floor(
-        seconds / 86400
-      )}d ago`;
-    return date.toLocaleDateString(
-      "en-US", {
-        month: "short",
-        day: "numeric"
-      }
-    );
-  } catch {
-    return "recently";
-  }
 }
 
 export default function App() {
